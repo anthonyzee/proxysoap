@@ -87,7 +87,7 @@ if (!$fp) {
 	$out="POST ".$proxy_url." HTTP/1.1"."\r\n";
 	$out.="Accept-Encoding: gzip,deflate"."\r\n";
 	$out.="Content-Type: text/xml;charset=UTF-8"."\r\n";
-	$out.='SOAPAction: ""'."\r\n";
+	$out.='SOAPAction: "'.$_POST["soapAction"].'"'."\r\n";
 	$out.="Content-Length: ".strlen($soapContent)."\r\n";
 	$out.="Host: ".$server."\r\n";
 	$out.="Connection: Keep-Alive"."\r\n";
@@ -103,22 +103,64 @@ if (!$fp) {
 			echo fgets($fp, 128);
 	}
 	*/
-	
 	/* Get response header. */
-	$header = fgets($fp, 1024);
+
+	$header = fgets($fp, 128);
+
 	$status = substr($header,9,3);
-	while ((trim($line = fgets($fp, 1024)) != "") && (!feof($fp))) {
+
+	while ((trim($line = fgets($fp, 128)) != "") && (!feof($fp))) {
 			$header .= $line;
 			if ($status=="401" and strpos($line,"WWW-Authenticate: Basic realm=\"")===0) {
 					fclose($fp);
-			}
+			}	
+		if (strpos(strtoupper($line), "TRANSFER-ENCODING") !== FALSE){
+			$tencode=explode(":", $line);
+			$strtencode=strtoupper(trim($tencode[1]));
+		}
+		
+		if (strpos(strtoupper($line), "CONTENT-LENGTH") !== FALSE){
+			$clen=explode(":", $line);
+			$intclen=intval($clen[1]);
+		}
 	}
 
-	/* Get response body. */
-	while (!feof($fp)) {
-			$body .= fgets($fp, 1024);						
+	if ($strtencode != "CHUNKED"){
+		while (!feof($fp)) {
+			$getlen=$intclen-strlen($body)+1;
+			$body.=fgets($fp, $getlen);
+			
+			if ($intclen<=strlen($body)){
+				echo $body;
+				fclose($fp);
+				exit();
+			}
+		}
+	}else{
+		$line = fgets($fp, 128);
+		$intclen=hexdec($line);
+		$inttlen=$intclen;
+		while (!feof($fp)) {
+			$body.=fgets($fp, $intclen);
+		
+			if ($inttlen<=strlen($body)){
+				$line = fgets($fp, 128);
+				if ($line==""){
+					$line = fgets($fp, 128);
+				}
+				$intclen=hexdec($line);	
+				$inttlen+=$intclen;
+				if ($intclen==0){
+					$body=htmlspecialchars_decode($body);
+					echo $body;
+					fclose($fp);
+					exit();
+				}
+			}
+		}
 	}
+	echo $body;
 	fclose($fp);
-	echo http_chunked_decode($body);
+	exit();
 }
 ?>
