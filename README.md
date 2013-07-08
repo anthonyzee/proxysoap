@@ -8,11 +8,13 @@ Download proxysoap.php and put it in the web server that has the same domain wit
 
 ## Usage
 
-### POST to the proxysoap.php with the following:
+### POST to proxysoap.php with the following parameters:
 
-For example: http://www.mydomain.com/proxysoap.php?proxy_url=http://www.myotherdomain:81/xyzwebservice/service1.asmx
+url: http://www.mydomain.com/proxysoap.php?proxy_url=http://www.myotherdomain:81/xyzwebservice/service1.asmx
+// if http://www.mydomain.com/proxysoap.php is where you put the proxysoap.php
+// if http://www.myotherdomain:81/xyzwebservice/service1.asmx is your web service endpoint
 
-Data: 
+data: 
 {
 	soapMessage: "",
 	soapAction: "" 
